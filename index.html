@@ -35,9 +35,11 @@
     --radius:    14px;
     --radius-sm: 9px;
     --radius-xs: 6px;
-    --ease-out:     cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out:  cubic-bezier(0.77, 0, 0.175, 1);
-    --ease-drawer:  cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in:        cubic-bezier(0.7, 0, 0.84, 0);
+    --ease-in-out:    cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-drawer:    cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -114,7 +116,7 @@
     background: var(--bg2);
     color: var(--text);
     padding: 8px 16px;
-    transition: background 160ms ease, transform 160ms var(--ease-out), box-shadow 160ms ease;
+    transition: background 160ms var(--ease-out-quart), transform 160ms var(--ease-out-expo), box-shadow 160ms var(--ease-out-quart);
     -webkit-tap-highlight-color: transparent;
   }
   @media (hover: hover) and (pointer: fine) {
@@ -194,21 +196,17 @@
     align-items: center;
     gap: 14px;
     box-shadow: var(--shadow-sm);
-    transition: box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out), border-color 200ms ease;
+    transition: box-shadow 200ms var(--ease-out-quart), transform 200ms var(--ease-out-expo), border-color 200ms var(--ease-out-quart);
     -webkit-tap-highlight-color: transparent;
     opacity: 0;
-    animation: fadeUp 300ms var(--ease-out) forwards;
+    animation: fadeUp 350ms var(--ease-out-expo) forwards;
+    animation-delay: calc(var(--i, 0) * 40ms);
   }
-  .card:nth-child(1) { animation-delay: 0ms; }
-  .card:nth-child(2) { animation-delay: 40ms; }
-  .card:nth-child(3) { animation-delay: 80ms; }
-  .card:nth-child(4) { animation-delay: 120ms; }
-  .card:nth-child(5) { animation-delay: 160ms; }
-  .card:nth-child(n+6) { animation-delay: 200ms; }
   @media (hover: hover) and (pointer: fine) {
     .card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: rgba(0,0,0,0.12); }
   }
-  .card:active { transform: scale(0.99); box-shadow: var(--shadow-sm); }
+  /* Exit faster than enter */
+  .card:active { transform: scale(0.99); box-shadow: var(--shadow-sm); transition-duration: 80ms; }
   @media (prefers-color-scheme: dark) {
     .card:hover { border-color: rgba(255,255,255,0.12); }
   }
@@ -683,7 +681,7 @@ function renderOverview(){
       :`<span style="font-family:'Geist Mono',monospace;font-size:11px">${personTxs.length} ${typeFilter}</span>`;
     const pillClass=n>=0?"pos":"neg";
     const pillSign=n>=0?"+":"-";
-    return`<div class="card" onclick="openPerson('${person.replace(/'/g,"\\'")}')">
+    return`<div class="card" style="--i:${people.indexOf(person)}" onclick="openPerson('${person.replace(/'/g,"\\'")}')">
       <div class="avatar" style="background:${bg};color:${col}">${initials(person)}</div>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600;font-size:15px;letter-spacing:-0.01em;margin-bottom:3px">${person}</div>
