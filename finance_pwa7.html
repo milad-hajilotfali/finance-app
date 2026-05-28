@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Finance" />
+<title>Finance Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#ffffff;--bg2:#f5f5f5;--bg3:#efefef;--text:#111111;--text2:#666666;--text3:#999999;--border:#e0e0e0;--green:#1D9E75;--red:#D85A30;--radius:12px;--radius-sm:8px;}
+  @media(prefers-color-scheme:dark){:root{--bg:#111111;--bg2:#1c1c1e;--bg3:#2c2c2e;--text:#f0f0f0;--text2:#aaaaaa;--text3:#666666;--border:#3a3a3a;}}
+  html,body{width:100%;overflow-x:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:540px;margin:0 auto;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);padding-left:0;padding-right:0;}
+  input,select{width:100%;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);font-size:16px;outline:none;-webkit-appearance:none;appearance:none;}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+  input:focus,select:focus{border-color:#378ADD;outline:none;}
+  button{cursor:pointer;border:0.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text);font-size:14px;padding:8px 16px;}
+  button:active{opacity:0.7}
+  .screen{padding:20px 16px;display:none;width:100%;}
+  .screen.active{display:block}
+  .card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:14px;}
+  .metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+  .metric{background:var(--bg2);border-radius:var(--radius-sm);padding:12px;}
+  .metric-label{font-size:11px;color:var(--text2);margin-bottom:4px;}
+  .metric-value{font-size:17px;font-weight:500;}
+  .row{display:flex;align-items:center;gap:10px;}
+  .avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0;}
+  .badge{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .error{font-size:13px;color:var(--red);background:#fff0ec;padding:8px 12px;border-radius:var(--radius-sm);margin-bottom:12px;}
+  @media(prefers-color-scheme:dark){.error{background:#2a1510}}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+  .topbar h2{font-size:20px;font-weight:500;}
+  .empty{text-align:center;padding:40px 0;color:var(--text2);font-size:14px;}
+  .tx-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:0.5px solid var(--border);}
+  .del-btn{border:none;background:none;color:var(--text3);font-size:20px;padding:0 4px;line-height:1;}
+  .loader{text-align:center;padding:40px;color:var(--text2);font-size:14px;}
+  .filters{display:flex;gap:8px;margin-bottom:14px;}
+  .filters select:first-child{flex:1;}
+  .filters select:last-child{width:130px;}
+
+  /* Dialog — centered iOS sheet style */
+  dialog{
+    border:none;border-radius:14px;padding:0;
+    width:calc(100% - 40px);max-width:360px;
+    box-shadow:0 8px 40px rgba(0,0,0,0.22);
+    background:var(--bg);
+    position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    margin:0;
+  }
+  dialog::backdrop{background:rgba(0,0,0,0.45);}
+  .dlg-body{padding:20px 20px 0;display:flex;flex-direction:column;gap:14px;}
+  .dlg-title{font-size:17px;font-weight:600;color:var(--text);text-align:center;margin-bottom:2px;}
+  .dlg-field{display:flex;flex-direction:column;gap:5px;}
+  .dlg-label{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;}
+  .dlg-divider{height:0.5px;background:var(--border);margin:4px 0;}
+  .dlg-section-title{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;}
+  .dlg-actions{display:flex;border-top:0.5px solid var(--border);margin-top:20px;}
+  .dlg-actions button{flex:1;padding:14px;font-size:16px;border:none;border-radius:0;background:transparent;color:var(--text);}
+  .dlg-actions button:first-child{border-right:0.5px solid var(--border);color:var(--text2);}
+  .dlg-actions button:last-child{font-weight:600;color:#378ADD;}
+  .dlg-person-section{background:var(--bg2);border-radius:var(--radius-sm);padding:12px;display:flex;flex-direction:column;gap:8px;}
+  .dlg-or{text-align:center;font-size:12px;color:var(--text3);font-weight:500;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screen-login" class="screen active">
+  <div style="padding-top:60px;max-width:320px;margin:0 auto">
+    <h2 style="font-size:22px;font-weight:500;margin-bottom:6px">Finance Manager</h2>
+    <p style="font-size:14px;color:var(--text2);margin-bottom:28px" id="login-subtitle">Sign in to your account</p>
+    <div id="login-error" class="error" style="display:none"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input id="login-user" placeholder="Username" autocomplete="username" />
+      <input id="login-pin" placeholder="4-digit PIN" type="password" maxlength="4" inputmode="numeric" autocomplete="current-password" />
+      <div id="pin-confirm-wrap" style="display:none"><input id="login-pin2" placeholder="Confirm PIN" type="password" maxlength="4" inputmode="numeric" /></div>
+      <button id="login-btn" style="margin-top:6px;padding:12px;background:var(--text);color:var(--bg);border-color:var(--text);font-weight:500;font-size:16px;">Sign in</button>
+      <button id="toggle-mode-btn" style="border:none;background:none;color:var(--text2);font-size:13px;padding:4px 0">No account? Register</button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<div id="screen-overview" class="screen">
+  <div class="topbar">
+    <h2>Overview</h2>
+    <div class="row">
+      <span id="overview-username" style="font-size:13px;color:var(--text2)"></span>
+      <button id="logout-btn" style="font-size:12px;padding:5px 10px">Sign out</button>
+    </div>
+  </div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Received</div><div class="metric-value" id="ov-received" style="color:var(--green)">€0.00</div></div>
+    <div class="metric"><div class="metric-label">Paid</div><div class="metric-value" id="ov-paid" style="color:var(--red)">€0.00</div></div>
+    <div class="metric"><div class="metric-label">Balance</div><div class="metric-value" id="ov-net">€0.00</div></div>
+  </div>
+  <div class="row" style="justify-content:space-between;margin-bottom:14px">
+    <span style="font-size:14px;font-weight:500">People</span>
+    <button id="open-add-dialog-btn" style="font-size:13px;padding:5px 12px">+ Add transaction</button>
+  </div>
+  <div class="filters">
+    <select id="filter-name" onchange="renderOverview()">
+      <option value="">All people</option>
+    </select>
+    <select id="filter-type" onchange="renderOverview()">
+      <option value="all">All</option>
+      <option value="received">Received</option>
+      <option value="paid">Paid</option>
+    </select>
+  </div>
+  <div id="people-list"><div class="loader">Loading...</div></div>
+</div>
+
+<!-- PERSON -->
+<div id="screen-person" class="screen">
+  <div class="topbar">
+    <div class="row">
+      <button id="back-btn" style="border:none;background:none;font-size:22px;padding:0;color:var(--text2)">←</button>
+      <h2 id="person-title"></h2>
+    </div>
+    <button id="open-person-add-btn" style="font-size:13px;padding:5px 12px">+ Add</button>
+  </div>
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Received</div><div class="metric-value" id="p-received" style="color:var(--green)">€0.00</div></div>
+    <div class="metric"><div class="metric-label">Paid</div><div class="metric-value" id="p-paid" style="color:var(--red)">€0.00</div></div>
+    <div class="metric"><div class="metric-label">Balance</div><div class="metric-value" id="p-net">€0.00</div></div>
+  </div>
+  <div style="margin-bottom:14px">
+    <select id="person-filter-type" onchange="renderPerson()" style="width:100%">
+      <option value="all">All transactions</option>
+      <option value="received">Received only</option>
+      <option value="paid">Paid only</option>
+    </select>
+  </div>
+  <div id="person-tx-list"></div>
+</div>
+
+<!-- ADD DIALOG (overview) -->
+<dialog id="add-dialog">
+  <div class="dlg-body">
+    <div class="dlg-title">Add Transaction</div>
+    <div class="dlg-field">
+      <div class="dlg-label">Person</div>
+      <div class="dlg-person-section">
+        <div id="dlg-existing-wrap">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:5px">Select existing</div>
+          <select id="dlg-person-select"></select>
+        </div>
+        <div class="dlg-or" id="dlg-or-label">— or type new —</div>
+        <input id="dlg-person" placeholder="New person name..." />
+      </div>
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Amount (€)</div>
+      <input id="dlg-amount" placeholder="0.00" type="number" inputmode="decimal" />
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Type</div>
+      <select id="dlg-type"><option value="received">Received</option><option value="paid">Paid</option></select>
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Date</div>
+      <input id="dlg-date" type="date" />
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Note (optional)</div>
+      <input id="dlg-note" placeholder="Add a note..." />
+    </div>
+  </div>
+  <div class="dlg-actions">
+    <button id="dlg-cancel">Cancel</button>
+    <button id="dlg-save">Save</button>
+  </div>
+</dialog>
+
+<!-- ADD DIALOG (person) -->
+<dialog id="person-add-dialog">
+  <div class="dlg-body">
+    <div class="dlg-title" id="person-dlg-title">Add Transaction</div>
+    <div class="dlg-field">
+      <div class="dlg-label">Amount (€)</div>
+      <input id="pdlg-amount" placeholder="0.00" type="number" inputmode="decimal" />
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Type</div>
+      <select id="pdlg-type"><option value="received">Received</option><option value="paid">Paid</option></select>
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Date</div>
+      <input id="pdlg-date" type="date" />
+    </div>
+    <div class="dlg-field">
+      <div class="dlg-label">Note (optional)</div>
+      <input id="pdlg-note" placeholder="Add a note..." />
+    </div>
+  </div>
+  <div class="dlg-actions">
+    <button id="pdlg-cancel">Cancel</button>
+    <button id="pdlg-save">Save</button>
+  </div>
+</dialog>
+
+<script>
+const SUPABASE_URL="https://aoknlirfmkeoqftfpsno.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFva25saXJmbWtlb3FmdGZwc25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5MDk3ODksImV4cCI6MjA5NTQ4NTc4OX0.ClNCe00HIRCZvlT6aBRTRKe0AaLp9oh9nBnT7uAVgKA";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser=null,allTx=[],selectedPerson=null,isRegister=false;
+
+const fmt=n=>"€"+new Intl.NumberFormat("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Math.abs(n));
+const hashPin=pin=>btoa("salt_"+pin+"_fm2025");
+const initials=name=>name.trim().split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2);
+const personColor=name=>{
+  const colors=["#1D9E75","#378ADD","#D85A30","#D4537E","#7F77DD","#EF9F27","#639922"];
+  let h=0;for(let c of name)h=(h*31+c.charCodeAt(0))%colors.length;return colors[h];
+};
+const today=()=>new Date().toISOString().slice(0,10);
+const show=id=>{document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById("screen-"+id).classList.add("active");window.scrollTo(0,0);};
+const showErr=(id,msg)=>{const el=document.getElementById(id);el.textContent=msg;el.style.display=msg?"block":"none";};
+
+// AUTH
+document.getElementById("toggle-mode-btn").onclick=()=>{
+  isRegister=!isRegister;
+  document.getElementById("login-subtitle").textContent=isRegister?"Create a new account":"Sign in to your account";
+  document.getElementById("login-btn").textContent=isRegister?"Create account":"Sign in";
+  document.getElementById("toggle-mode-btn").textContent=isRegister?"Already have an account? Sign in":"No account? Register";
+  document.getElementById("pin-confirm-wrap").style.display=isRegister?"block":"none";
+  showErr("login-error","");
+};
+
+document.getElementById("login-btn").onclick=async()=>{
+  const user=document.getElementById("login-user").value.trim().toLowerCase();
+  const pin=document.getElementById("login-pin").value;
+  const pin2=document.getElementById("login-pin2").value;
+  showErr("login-error","");
+  if(!user||pin.length<4){showErr("login-error","Username and 4-digit PIN required.");return;}
+  document.getElementById("login-btn").textContent="...";
+  try{
+    if(isRegister){
+      if(pin!==pin2){showErr("login-error","PINs do not match.");return;}
+      const{data:ex}=await sb.from("accounts").select("username").eq("username",user).single();
+      if(ex){showErr("login-error","Username already taken.");return;}
+      const{error}=await sb.from("accounts").insert({username:user,pin_hash:hashPin(pin)});
+      if(error)throw error;
+    }else{
+      const{data,error}=await sb.from("accounts").select("pin_hash").eq("username",user).single();
+      if(error||!data||data.pin_hash!==hashPin(pin)){showErr("login-error","Invalid username or PIN.");return;}
+    }
+    currentUser=user;
+    document.getElementById("overview-username").textContent=user;
+    await loadTransactions();
+    show("overview");
+  }catch(e){showErr("login-error",e.message||"Something went wrong.");}
+  finally{document.getElementById("login-btn").textContent=isRegister?"Create account":"Sign in";}
+};
+
+document.getElementById("logout-btn").onclick=()=>{
+  currentUser=null;allTx=[];selectedPerson=null;
+  document.getElementById("login-user").value="";
+  document.getElementById("login-pin").value="";
+  document.getElementById("login-pin2").value="";
+  show("login");
+};
+
+// LOAD
+async function loadTransactions(){
+  const{data,error}=await sb.from("transactions").select("*").eq("username",currentUser).order("date",{ascending:false});
+  if(error)throw error;
+  allTx=data||[];
+  refreshPeopleSelect();
+  renderOverview();
+}
+
+// PEOPLE SELECT
+function refreshPeopleSelect(){
+  const people=[...new Set(allTx.map(t=>t.person))];
+  const sel=document.getElementById("filter-name");
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All people</option>'+people.map(p=>`<option value="${p}"${p===cur?" selected":""}>${p}</option>`).join("");
+  // dialog select
+  const dlgSel=document.getElementById("dlg-person-select");
+  const wrap=document.getElementById("dlg-existing-wrap");
+  const orLabel=document.getElementById("dlg-or-label");
+  dlgSel.innerHTML=people.map(p=>`<option value="${p}">${p}</option>`).join("");
+  wrap.style.display=people.length>0?"block":"none";
+  orLabel.style.display=people.length>0?"block":"none";
+}
+
+// OVERVIEW
+function renderOverview(){
+  const nameFilter=document.getElementById("filter-name").value;
+  const typeFilter=document.getElementById("filter-type").value;
+
+  // filtered metrics
+  const filteredTx=nameFilter?allTx.filter(t=>t.person===nameFilter):allTx;
+  const shownTx=typeFilter==="all"?filteredTx:filteredTx.filter(t=>t.type===typeFilter);
+  const totalRec=filteredTx.filter(t=>t.type==="received").reduce((s,t)=>s+parseFloat(t.amount),0);
+  const totalPaid=filteredTx.filter(t=>t.type==="paid").reduce((s,t)=>s+parseFloat(t.amount),0);
+  const net=totalRec-totalPaid;
+  document.getElementById("ov-received").textContent=fmt(totalRec);
+  document.getElementById("ov-paid").textContent=fmt(totalPaid);
+  const netEl=document.getElementById("ov-net");
+  netEl.textContent=fmt(net);netEl.style.color=net>=0?"var(--green)":"var(--red)";
+
+  let people=[...new Set(allTx.map(t=>t.person))];
+  if(nameFilter)people=people.filter(p=>p===nameFilter);
+
+  const list=document.getElementById("people-list");
+  if(allTx.length===0){list.innerHTML='<div class="empty">No transactions yet.<br>Add one above.</div>';return;}
+  if(people.length===0){list.innerHTML='<div class="empty">No results match your filters.</div>';return;}
+
+  const cards=people.map(person=>{
+    const personTxs=allTx.filter(t=>t.person===person&&(typeFilter==="all"||t.type===typeFilter));
+    if(personTxs.length===0)return"";
+    const rec=allTx.filter(t=>t.person===person&&t.type==="received").reduce((s,t)=>s+parseFloat(t.amount),0);
+    const paid=allTx.filter(t=>t.person===person&&t.type==="paid").reduce((s,t)=>s+parseFloat(t.amount),0);
+    const n=rec-paid;
+    const col=personColor(person);
+    const sub=typeFilter==="all"
+      ?`↑ ${fmt(rec)} · ↓ ${fmt(paid)}`
+      :`${personTxs.length} ${typeFilter} · ${fmt(personTxs.reduce((s,t)=>s+parseFloat(t.amount),0))}`;
+    return`<div class="card" onclick="openPerson('${person.replace(/'/g,"\\'")}')">
+      <div class="avatar" style="background:${col}22;color:${col}">${initials(person)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:15px">${person}</div>
+        <div style="font-size:12px;color:var(--text2)">${sub}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:500;font-size:15px;color:${n>=0?"var(--green)":"var(--red)"}">${n<0?"-":""}${fmt(n)}</div>
+        <div style="font-size:11px;color:var(--text2)">${n>=0?"you receive":"you owe"}</div>
+      </div>
+    </div>`;
+  }).filter(Boolean).join("");
+  list.innerHTML=cards||'<div class="empty">No results match your filters.</div>';
+}
+
+// ADD DIALOG
+document.getElementById("open-add-dialog-btn").onclick=()=>{
+  refreshPeopleSelect();
+  document.getElementById("dlg-person").value="";
+  document.getElementById("dlg-amount").value="";
+  document.getElementById("dlg-type").value="received";
+  document.getElementById("dlg-date").value=today();
+  document.getElementById("dlg-note").value="";
+  document.getElementById("add-dialog").showModal();
+};
+document.getElementById("dlg-cancel").onclick=()=>document.getElementById("add-dialog").close();
+document.getElementById("dlg-save").onclick=async()=>{
+  const selVal=document.getElementById("dlg-person-select").value;
+  const inputVal=document.getElementById("dlg-person").value.trim();
+  const person=inputVal||selVal;
+  const amount=parseFloat(document.getElementById("dlg-amount").value);
+  const type=document.getElementById("dlg-type").value;
+  const date=document.getElementById("dlg-date").value;
+  const note=document.getElementById("dlg-note").value.trim();
+  if(!person||isNaN(amount)||amount<=0){alert("Please fill in person and a valid amount.");return;}
+  document.getElementById("dlg-save").textContent="...";
+  const{error}=await sb.from("transactions").insert({username:currentUser,person,amount,type,date,note});
+  document.getElementById("dlg-save").textContent="Save";
+  if(error){alert(error.message);return;}
+  document.getElementById("add-dialog").close();
+  await loadTransactions();
+};
+
+// PERSON VIEW
+function openPerson(person){
+  selectedPerson=person;
+  document.getElementById("person-title").textContent=person;
+  document.getElementById("person-filter-type").value="all";
+  renderPerson();
+  show("person");
+}
+
+function renderPerson(){
+  const typeFilter=document.getElementById("person-filter-type").value;
+  const txs=allTx.filter(t=>t.person===selectedPerson);
+  const rec=txs.filter(t=>t.type==="received").reduce((s,t)=>s+parseFloat(t.amount),0);
+  const paid=txs.filter(t=>t.type==="paid").reduce((s,t)=>s+parseFloat(t.amount),0);
+  const net=rec-paid;
+  document.getElementById("p-received").textContent=fmt(rec);
+  document.getElementById("p-paid").textContent=fmt(paid);
+  const netEl=document.getElementById("p-net");
+  netEl.textContent=fmt(net);netEl.style.color=net>=0?"var(--green)":"var(--red)";
+  const filtered=[...txs.filter(t=>typeFilter==="all"||t.type===typeFilter)].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const list=document.getElementById("person-tx-list");
+  if(filtered.length===0){list.innerHTML='<div class="empty">No transactions'+(typeFilter!=="all"?" for this filter":"")+" yet.</div>";return;}
+  list.innerHTML=filtered.map(tx=>`
+    <div class="tx-row">
+      <div class="badge" style="background:${tx.type==="received"?"var(--green)":"var(--red)"}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:500">${tx.type==="received"?"Received":"Paid"} — ${fmt(tx.amount)}</div>
+        <div style="font-size:12px;color:var(--text2)">${tx.date}${tx.note?" · "+tx.note:""}</div>
+      </div>
+      <button class="del-btn" onclick="deleteTx('${tx.id}')">×</button>
+    </div>`).join("");
+}
+
+document.getElementById("back-btn").onclick=()=>{selectedPerson=null;show("overview");};
+
+// PERSON ADD DIALOG
+document.getElementById("open-person-add-btn").onclick=()=>{
+  document.getElementById("person-dlg-title").textContent="Add to "+selectedPerson;
+  document.getElementById("pdlg-amount").value="";
+  document.getElementById("pdlg-type").value="received";
+  document.getElementById("pdlg-date").value=today();
+  document.getElementById("pdlg-note").value="";
+  document.getElementById("person-add-dialog").showModal();
+};
+document.getElementById("pdlg-cancel").onclick=()=>document.getElementById("person-add-dialog").close();
+document.getElementById("pdlg-save").onclick=async()=>{
+  const amount=parseFloat(document.getElementById("pdlg-amount").value);
+  const type=document.getElementById("pdlg-type").value;
+  const date=document.getElementById("pdlg-date").value;
+  const note=document.getElementById("pdlg-note").value.trim();
+  if(isNaN(amount)||amount<=0){alert("Please enter a valid amount.");return;}
+  document.getElementById("pdlg-save").textContent="...";
+  const{error}=await sb.from("transactions").insert({username:currentUser,person:selectedPerson,amount,type,date,note});
+  document.getElementById("pdlg-save").textContent="Save";
+  if(error){alert(error.message);return;}
+  document.getElementById("person-add-dialog").close();
+  await loadTransactions();
+  renderPerson();
+};
+
+async function deleteTx(id){
+  if(!confirm("Delete this transaction?"))return;
+  await sb.from("transactions").delete().eq("id",id);
+  await loadTransactions();
+  if(selectedPerson)renderPerson();
+}
+</script>
+</body>
+</html>
